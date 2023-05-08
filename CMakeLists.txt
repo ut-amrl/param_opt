@@ -6,7 +6,7 @@ message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Arch: ${CMAKE_SYSTEM_PROCESSOR}")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS on)
-set(CMAKE_CXX_FLAGS "-std=c++14 -Wall -Wextra -Werror")
+set(CMAKE_CXX_FLAGS "-std=c++17 -Wall -Werror")
 
 if(${CMAKE_BUILD_TYPE} MATCHES "Release")
   message(STATUS "Additional Flags for Release mode")
@@ -16,24 +16,30 @@ elseif(${CMAKE_BUILD_TYPE} MATCHES "Debug")
   set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -g")
 endif()
 
-# include($ENV{ROS_ROOT}/core/rosbuild/rosbuild.cmake)
-# rosbuild_init()
-# set(ROS_BUILD_STATIC_LIBS true)
-# set(ROS_BUILD_SHARED_LIBS false)
-
-message(STATUS "ROS-Overrride Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "CXX Flags: ${CMAKE_CXX_FLAGS}")
+
+find_package(Eigen3 3.3 REQUIRED)
+find_package(OpenCV REQUIRED)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 
 set(libs glog gflags boost_system lua5.1 amrl_shared_lib
-    pthread)
+    pthread Eigen3::Eigen ${OpenCV_LIBS})
 
 add_subdirectory(src/shared)
 include_directories(src/shared)
 include_directories(src)
+include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(src/config_reader/include)
+
+add_library(gnav
+            src/gnav/ackermann_motion_primitives.cc
+            src/gnav/constant_curvature_arcs.cc
+            src/gnav/linear_evaluator.cc
+            src/gnav/motion_primitives.cc) 
+target_link_libraries(gnav ${libs})
 
 add_executable(param_opt
 			src/param_opt/param_opt_main.cpp)
-target_link_libraries(param_opt ${libs})
+target_link_libraries(param_opt ${libs} gnav)
