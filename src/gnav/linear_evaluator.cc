@@ -126,6 +126,8 @@ vector<std::pair<Eigen::Vector4f, float>> LinearEvaluator::GetFeatures(
     features[i] = {{paths[i]->Length(), clearance[i], option_clearance[i],
                     paths[i]->AngularLength()},
                    ((ConstantCurvatureArc*)(paths[i].get()))->curvature};
+    // std::cout << paths[i]->Length() << std::endl;
+
     if (FLAGS_v > 2) {
       printf(
           "%3d: curvature=%7.3f, fpl=%7.3f, avg_fpl=%7.3f, "

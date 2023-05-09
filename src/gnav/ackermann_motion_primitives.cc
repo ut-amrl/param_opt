@@ -131,7 +131,11 @@ vector<shared_ptr<PathRolloutBase>> AckermannSampler::GetSamples(int n) {
       const float c = Sign(x) * x * x * CONFIG_max_curvature;
       auto sample = new ConstantCurvatureArc(c);
       SetMaxPathLength(sample);
+            // std::cout << sample->Length() << std::endl;
+
       CheckObstacles(sample);
+
+      // std::cout << sample->Length()  << std::endl;
       samples.push_back(shared_ptr<PathRolloutBase>(sample));
     }
   }
@@ -174,6 +178,9 @@ void AckermannSampler::CheckObstacles(ConstantCurvatureArc* path_ptr) {
     }
     return;
   }
+
+  
+
   // return;
   const float path_radius = 1.0 / path.curvature;
   const Vector2f c(0, path_radius);
@@ -187,19 +194,23 @@ void AckermannSampler::CheckObstacles(ConstantCurvatureArc* path_ptr) {
   float angle_min = M_PI;
   path.obstruction = Vector2f(-nav_params.max_free_path_length, 0);
   // The x-coordinate of the rear margin.
-  const float x_min = -0.5 * nav_params.robot_length +
+  const float x_min = -0.15 * nav_params.robot_length +
                       nav_params.base_link_offset - nav_params.obstacle_margin;
   using std::isfinite;
+  // std::cout << "top " << x_min <<  " " << l << " " << w << std::endl;
   for (const Vector2f& p : point_cloud) {
     if (!isfinite(p.x()) || !isfinite(p.y()) || p.x() < 0.0f) continue;
     if (p.x() > x_min && p.x() < l && fabs(p.y()) < w) {
       // This point is within the robot plus margin boundary.
       // printf("Obstacle within robot boundary\n");
+      // std::cout << p << std::endl;
+      // std::cout << "making 0 " << std::endl;
       path.length = 0;
       path.obstruction = p;
       angle_min = 0;
       break;
     }
+
     const float r_sq = (p - c).squaredNorm();
     if (r_sq < r1_sq || r_sq > r3_sq) continue;
     const float r = sqrt(r_sq);
@@ -239,10 +250,12 @@ void AckermannSampler::CheckObstacles(ConstantCurvatureArc* path_ptr) {
       break;
     }
   }
+
   path.length = max(0.0f, path.length);
   if (path.length < stopping_dist) {
     path.length = 0;
   }
+
   angle_min = min<float>(angle_min, path.length * fabs(path.curvature));
 
   for (const Vector2f& p : point_cloud) {

@@ -107,7 +107,7 @@ def range_data():
         pcloud = []
         for i in ranges:
             if i < range_min or i > range_max:
-                pcloud.append([0, 0])
+                pcloud.append([range_max * np.cos(theta), range_max * np.sin(theta)])
             else:
                 pcloud.append([i * np.cos(theta), i * np.sin(theta)])
             theta += angle_incr

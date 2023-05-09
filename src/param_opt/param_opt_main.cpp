@@ -1,17 +1,26 @@
 #include <bits/stdc++.h>
 
 #include <eigen3/Eigen/Dense>
+#include <algorithm>
+#include <random>
 
 #include "gnav/ackermann_motion_primitives.h"
 #include "gnav/linear_evaluator.h"
+#include "gflags/gflags.h"
+#include "config_reader/config_reader.h"
 
-#define N_SAMPLES 10
+
 
 using std::pair;
 using std::vector;
+using Eigen::Vector4f;
+
+DEFINE_string(robot_config, "config/navigation.lua", "help");
+DEFINE_int32(n_samples, 15, "number of path options");
+DEFINE_string(dataset_name, "low_speed_optimal_line/curv_smaller_0.2.csv", "filename to dataset");
 
 vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
-  auto filepath = "low_speed_optimal_line/dataset.csv";
+  auto filepath = FLAGS_dataset_name;
   std::ifstream csv(filepath);
   vector<pair<vector<Eigen::Vector2f>, vector<float>>> data;
   std::string line;
@@ -37,6 +46,8 @@ vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
       float x = std::stof(cell);
       std::getline(ss, cell, ',');
       float y = std::stof(cell);
+      if (x == 0 && y == 0)
+        continue;
       point_cloud.push_back(Eigen::Vector2f(x, y));
     }
     data.push_back({point_cloud, {steer, velocity}});
@@ -47,6 +58,8 @@ vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
 
 
 int main() {
+  config_reader::ConfigReader reader({FLAGS_robot_config});
+
   // unused
   Eigen::Vector2f zeros(0, 0);
   cv::Mat img;
@@ -63,17 +76,18 @@ int main() {
   motion_primitives::LinearEvaluator evaluator;
   motion_primitives::AckermannSampler sampler;
 
-  Eigen::Vector4f weights{1, 0, 1, 1};
+  Eigen::Vector4f weights{0, 0, 0, 0};
 
-  std::cout << "data size" << data.size() << std::endl;
+  auto rd = std::random_device();
+  auto rng = std::default_random_engine{rd()};
 
+  for (int e = 0; e < 1; e++) {
+  std::shuffle(std::begin(data), std::end(data), rng);
   for (size_t i = 0; i < data.size(); i++) {
     sampler.Update({data[i].second[1], 0}, 0, zeros, data[i].first, img);
     evaluator.Update(zeros, 0, {data[i].second[1], 0}, 0, zeros, data[i].first, img);
-    auto samples = sampler.GetSamples(N_SAMPLES);
+    auto samples = sampler.GetSamples(FLAGS_n_samples);
     auto rollout_features = evaluator.GetFeatures(samples);
-
-    std::cout << "rollout features size" <<  rollout_features.size() << std::endl;
 
     float curv_closest_to_gt = -3;
     float closest_curv_diff = 10000000;
@@ -81,10 +95,12 @@ int main() {
     Eigen::Vector4f gt_features;
     float highest_scoring_curv = 0;
     float highest_score = -100000;
+
     for (auto& [features, curvature] : rollout_features) {
-      // curvature of rollout minus ground truth
-      std::cout << "curv" << curvature << std::endl;
       float score = features.dot(weights);
+      // std::cout << features << std::endl;
+
+      // curvature of rollout minus ground truth
       if (abs(curvature - data[i].second[0]) < closest_curv_diff) {
         closest_curv_diff = abs(curvature - data[i].second[0]);
         curv_closest_to_gt = curvature;
@@ -92,37 +108,83 @@ int main() {
         gt_features = features;
       }
 
+      // find highest scoring curvature
       if (highest_score < score) {
         highest_score = score;
         highest_scoring_curv = curvature;
       }
     }
 
+    // update weights if our highest scoring curvature is not ground truth
     if (highest_scoring_curv != curv_closest_to_gt) {
       weights += gt_features;
     }
 
+    Vector4f avg_feature = {0,0,0,0};
+    size_t ct = 0;
     for (auto& [features, curvature] : rollout_features) {
       float score = features.dot(weights);
 
       if (score > gt_score) {
-        // subtract the featurs from the weights
-        weights -= features;
+        ct++;
+        avg_feature += features;
       }
     }
 
-    // if certain rollouts outscore the ground truth
-      // subtract the features from weights
+    if (ct != 0) {
+      weights -= (avg_feature / ct);
+    }
+  }
+  }
 
-    // else ignore
+
+  float points = 0;
+  for (size_t i = 0; i < data.size(); i++) {
+    sampler.Update({data[i].second[1], 0}, 0, zeros, data[i].first, img);
+    evaluator.Update(zeros, 0, {data[i].second[1], 0}, 0, zeros, data[i].first, img);
+    auto samples = sampler.GetSamples(FLAGS_n_samples);
+    auto rollout_features = evaluator.GetFeatures(samples);
+
+    float curv_closest_to_gt = -3;
+    float closest_curv_diff = 10000000;
+    Eigen::Vector4f gt_features;
+    float highest_scoring_curv = 0;
+    float highest_score = -100000;
+
+    for (auto& [features, curvature] : rollout_features) {
+      float score = features.dot(weights);
+
+      // curvature of rollout minus ground truth
+      if (abs(curvature - data[i].second[0]) < closest_curv_diff) {
+        closest_curv_diff = abs(curvature - data[i].second[0]);
+        curv_closest_to_gt = curvature;
+        gt_features = features;
+      }
+
+      // find highest scoring curvature
+      if (highest_score < score) {
+        highest_score = score;
+        highest_scoring_curv = curvature;
+      }
+      // std::cout << curv_closest_to_gt << " " << highest_scoring_curv << std::endl;
+
+    }
+
+    if (highest_scoring_curv == curv_closest_to_gt) {
+      points += 1.0;
+    } else if (fabs(highest_scoring_curv - curv_closest_to_gt) <= (5.0 / FLAGS_n_samples) * 2.5) {
+      points += 0.5;
+  }
   }
 
   std::cout << "weights: " << weights << std::endl;
+
+  std::cout << "acc: " << points / ((float) data.size()) << std::endl;
   // call evaluator
   // motion_primitives::LinearEvaluator evaluator;
   // motion_primitives::AckermannSampler sampler;
   // sampler.Update(zeros, 0, zeros, point_cloud, img);
   // evaluator.Update(zeros, 0, zeros, 0, zeros, point_cloud, img);
-  // auto samples = sampler.GetSamples(N_SAMPLES);
+  // auto samples = sampler.GetSamples(FLAGS_n_samples);
   // auto best = evaluator.GetFeatures(samples);
 }

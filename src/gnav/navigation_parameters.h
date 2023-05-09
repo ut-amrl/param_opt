@@ -99,15 +99,15 @@ struct NavigationParameters {
 
   // Default constructor, just set defaults.
   NavigationParameters()
-      : dt(0.025),
-        linear_limits(0.5, 0.5, 0.5),
-        angular_limits(0.5, 0.5, 1.0),
+      : dt(0.05),
+        linear_limits(6, 6, 6),
+        angular_limits(6, 6, 1.0),
         carrot_dist(2.5),
         system_latency(0.24),
-        obstacle_margin(0.15),
-        num_options(41),
-        robot_width(0.44),
-        robot_length(0.5),
+        obstacle_margin(0.05),
+        num_options(21),
+        robot_width(0.24),
+        robot_length(0.44),
         base_link_offset(0),
         max_free_path_length(10.0),
         max_clearance(1.0),

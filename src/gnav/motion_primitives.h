@@ -21,6 +21,7 @@
 
 #include <memory>
 #include <vector>
+#include <iostream>
 
 #include "eigen3/Eigen/Dense"
 #include "opencv2/core/mat.hpp"
@@ -90,6 +91,10 @@ struct PathRolloutSamplerBase {
     local_target = new_local_target;
     point_cloud = new_point_cloud;
     image = new_image;
+
+    // for (auto j : point_cloud) {
+    //   std::cout << j << std::endl;
+    // }
   }
 
   void SetNavParams(const navigation::NavigationParameters& new_params) {
