@@ -18,8 +18,8 @@ DEFINE_string(robot_config, "config/navigation.lua", "help");
 DEFINE_string(dataset_name, "manual-unsupervised-laps/dataset.csv",
               "filename to dataset");
 
-const int n_samples = 41;
-const int n_features = 4;
+const int NUM_SAMPLES = 41;
+const int NUM_FEATURES = 4;
 
 vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
   auto filepath = FLAGS_dataset_name;
@@ -58,7 +58,9 @@ vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
 }
 
 // write a function to read the format that out_data is written in
-std::vector<std::pair<Eigen::MatrixXf, Eigen::VectorXf>> read_data() {
+std::vector<std::pair<Eigen::Matrix<float, NUM_SAMPLES, NUM_FEATURES>,
+                      Eigen::Matrix<float, NUM_SAMPLES, 1>>>
+read_data() {
   std::ifstream csv("data.csv");
   std::string line;
   std::getline(csv, line);
@@ -72,12 +74,15 @@ std::vector<std::pair<Eigen::MatrixXf, Eigen::VectorXf>> read_data() {
   std::getline(ss, cell, ',');
   n_features = std::stoi(cell);
   std::getline(ss, cell, ',');
-  std::vector<std::pair<Eigen::MatrixXf, Eigen::VectorXf>> data;
+  std::vector<std::pair<Eigen::Matrix<float, NUM_SAMPLES, NUM_FEATURES>,
+                        Eigen::Matrix<float, NUM_SAMPLES, 1>>>
+      data;
   while (std::getline(csv, line)) {
     std::stringstream ss(line);
     std::string cell;
-    Eigen::MatrixXf state(n_samples, n_features);
-    Eigen::VectorXf cost(n_samples);
+    Eigen::Matrix<float, NUM_SAMPLES, NUM_FEATURES> state(NUM_SAMPLES,
+                                                          NUM_FEATURES);
+    Eigen::Matrix<float, NUM_SAMPLES, 1> cost(NUM_SAMPLES);
     for (int i = 0; i < n_samples; i++) {
       for (int j = 0; j < n_features; j++) {
         std::getline(ss, cell, ',');
@@ -104,8 +109,8 @@ int main(int argc, char** argv) {
   auto data = read_csv();
   motion_primitives::LinearEvaluator evaluator;
   motion_primitives::AckermannSampler sampler;
-  std::vector<std::pair<Eigen::Matrix<float, n_samples, n_features>,
-                        Eigen::Matrix<float, n_samples, 1>>>
+  std::vector<std::pair<Eigen::Matrix<float, NUM_SAMPLES, NUM_FEATURES>,
+                        Eigen::Matrix<float, NUM_SAMPLES, 1>>>
       out_data;
   for (size_t i = 0; i < data.size(); i++) {
     Eigen::Vector2f vel = {data[i].second[1], 0};
@@ -113,11 +118,11 @@ int main(int argc, char** argv) {
     float ang_vel = vel.x() * data[i].second[0];
     sampler.Update(vel, ang_vel, zeros, data[i].first, img);
     evaluator.Update(zeros, 0, vel, ang_vel, zeros, data[i].first, img);
-    auto samples = sampler.GetSamples(n_samples + 1);
+    auto samples = sampler.GetSamples(NUM_SAMPLES + 1);
     auto rollouts = evaluator.GetFeatures(samples);
 
-    // make n_samples x n_features matrix of features
-    Eigen::Matrix<float, n_samples, n_features> state(n_samples, 4);
+    // make n_samples x NUM_FEATURES matrix of features
+    Eigen::Matrix<float, NUM_SAMPLES, NUM_FEATURES> state(NUM_SAMPLES, 4);
     for (size_t j = 0; j < samples.size(); j++) {
       state.row(j) = rollouts[j].first;
     }
@@ -136,7 +141,7 @@ int main(int argc, char** argv) {
     // make cost vector such that the closest sample has cost 0 and every one
     // other than it has an increasing cost based on how far its index is from
     // the closest
-    Eigen::Matrix<float, n_samples, 1> cost;
+    Eigen::Matrix<float, NUM_SAMPLES, 1> cost;
     for (int j = 0; j < (int)rollouts.size(); j++) {
       cost(j) = std::abs(j - min_idx);
     }
@@ -150,7 +155,7 @@ int main(int argc, char** argv) {
   // vector in the first row
   std::ofstream outfile;
   outfile.open("data.csv");
-  outfile << out_data.size() << "," << n_samples << "," << 4 << "," << 1
+  outfile << out_data.size() << "," << NUM_SAMPLES << "," << 4 << "," << 1
           << std::endl;
   for (size_t i = 0; i < out_data.size(); i++) {
     for (int j = 0; j < out_data[i].first.rows(); j++) {
