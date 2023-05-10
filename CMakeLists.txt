@@ -48,3 +48,6 @@ target_link_libraries(param_opt ${libs} gnav)
 add_executable(ceres_param
       src/param_opt/ceres_param.cpp)
 target_link_libraries(ceres_param ${libs} ${CERES_INCLUDE_DIRS} ceres)
+add_executable(param_data_gen
+			src/param_opt/param_data_gen.cpp)
+target_link_libraries(param_data_gen ${libs} gnav)
