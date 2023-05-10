@@ -64,7 +64,6 @@ void write_features() {
   
 }
 
-
 int main(int argc, char** argv) {
      gflags::ParseCommandLineFlags(&argc, &argv, true);
   config_reader::ConfigReader reader({FLAGS_robot_config});
