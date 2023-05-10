@@ -123,8 +123,9 @@ vector<std::pair<Eigen::Vector4f, float>> LinearEvaluator::GetFeatures(
       clearance[i] += w * paths[i - j]->Length();
       clearance[i] += w * paths[i + j]->Length();
     }
-    features[i] = {{paths[i]->Length(), clearance[i], option_clearance[i],
-                    paths[i]->AngularLength()},
+
+    features[i] = {{paths[i]->Length()/nav_params.max_free_path_length, clearance[i]/(nav_params.max_free_path_length), option_clearance[i]/nav_params.max_clearance,
+                    paths[i]->AngularLength()/( (float) M_PI*2)},
                    ((ConstantCurvatureArc*)(paths[i].get()))->curvature};
     // std::cout << paths[i]->Length() << std::endl;
 

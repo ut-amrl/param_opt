@@ -17,7 +17,11 @@ using Eigen::Vector4f;
 
 DEFINE_string(robot_config, "config/navigation.lua", "help");
 DEFINE_int32(n_samples, 15, "number of path options");
-DEFINE_string(dataset_name, "low_speed_optimal_line/curv_smaller_0.2.csv", "filename to dataset");
+DEFINE_string(dataset_name, "low_speed_optimal_line/curv_greater.csv", "filename to dataset");
+DEFINE_double(alpha, 0.1, "das");
+DEFINE_int32(epochs, 3, "epns");
+
+
 
 vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
   auto filepath = FLAGS_dataset_name;
@@ -56,8 +60,13 @@ vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
   return data;
 }
 
+void write_features() {
+  
+}
 
-int main() {
+
+int main(int argc, char** argv) {
+     gflags::ParseCommandLineFlags(&argc, &argv, true);
   config_reader::ConfigReader reader({FLAGS_robot_config});
 
   // unused
@@ -76,16 +85,24 @@ int main() {
   motion_primitives::LinearEvaluator evaluator;
   motion_primitives::AckermannSampler sampler;
 
-  Eigen::Vector4f weights{0, 0, 0, 0};
+  // navigation::NavigationParameters nav_params{};
+  // sampler.SetNavParams(nav_params);
 
-  auto rd = std::random_device();
-  auto rng = std::default_random_engine{rd()};
 
-  for (int e = 0; e < 1; e++) {
-  std::shuffle(std::begin(data), std::end(data), rng);
+  Eigen::Vector4f weights{0,0,0,0};
+
+  // auto rd = std::random_device();
+  // auto rng = std::default_random_engine{rd()};
+
+  std::cout << data.size() << std::endl;
+
+  for (int e = 0; e < FLAGS_epochs; e++) {
+  // std::shuffle(std::begin(data), std::end(data), rng);
   for (size_t i = 0; i < data.size(); i++) {
-    sampler.Update({data[i].second[1], 0}, 0, zeros, data[i].first, img);
-    evaluator.Update(zeros, 0, {data[i].second[1], 0}, 0, zeros, data[i].first, img);
+    Eigen::Vector2f vel = {data[i].second[1], 0};
+    float ang_vel = vel.x() * data[i].second[0];
+    sampler.Update(vel, ang_vel, zeros, data[i].first, img);
+    evaluator.Update(zeros, 0, vel, ang_vel, zeros, data[i].first, img);
     auto samples = sampler.GetSamples(FLAGS_n_samples);
     auto rollout_features = evaluator.GetFeatures(samples);
 
@@ -95,6 +112,8 @@ int main() {
     Eigen::Vector4f gt_features;
     float highest_scoring_curv = 0;
     float highest_score = -100000;
+
+    // std::cout << "-----------------------------------------------------------------------" << std::endl;
 
     for (auto& [features, curvature] : rollout_features) {
       float score = features.dot(weights);
@@ -117,7 +136,7 @@ int main() {
 
     // update weights if our highest scoring curvature is not ground truth
     if (highest_scoring_curv != curv_closest_to_gt) {
-      weights += gt_features;
+      weights += FLAGS_alpha * gt_features;
     }
 
     Vector4f avg_feature = {0,0,0,0};
@@ -132,7 +151,7 @@ int main() {
     }
 
     if (ct != 0) {
-      weights -= (avg_feature / ct);
+      weights -= FLAGS_alpha * (avg_feature / ct);
     }
   }
   }

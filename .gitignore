@@ -6,3 +6,4 @@ lib
 data
 *.bag
 .env
+*.csv

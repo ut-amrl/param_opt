@@ -157,6 +157,7 @@ struct PathEvaluatorBase {
   std::vector<Eigen::Vector2f> point_cloud;
   // Latest image observation.
   cv::Mat image;
+  navigation::NavigationParameters nav_params;
 };
 
 float Run1DTimeOptimalControl(const navigation::MotionLimits& limits,

@@ -111,13 +111,15 @@ struct NavigationParameters {
         base_link_offset(0),
         max_free_path_length(10.0),
         max_clearance(1.0),
+        local_fov(0.0),
         can_traverse_stairs(false),
         use_map_speed(true),
         target_dist_tolerance(0.1),
         target_vel_tolerance(0.1),
         target_angle_tolerance(0.05),
         use_kinect(true),
-        evaluator_type("cost_map") {}
+        evaluator_type("cost_map"),
+        model_path("") {}
 };
 }  // namespace navigation
 
