@@ -43,3 +43,7 @@ target_link_libraries(gnav ${libs})
 add_executable(param_opt
 			src/param_opt/param_opt_main.cpp)
 target_link_libraries(param_opt ${libs} gnav)
+
+add_executable(param_data_gen
+			src/param_opt/param_data_gen.cpp)
+target_link_libraries(param_data_gen ${libs} gnav)
