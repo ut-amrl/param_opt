@@ -17,11 +17,9 @@ using Eigen::Vector4f;
 
 DEFINE_string(robot_config, "config/navigation.lua", "help");
 DEFINE_int32(n_samples, 15, "number of path options");
-DEFINE_string(dataset_name, "low_speed_optimal_line/curv_greater.csv", "filename to dataset");
+DEFINE_string(dataset_name, "low_speed_optimal_line/dataset.csv", "filename to dataset");
 DEFINE_double(alpha, 0.1, "das");
 DEFINE_int32(epochs, 3, "epns");
-
-
 
 vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
   auto filepath = FLAGS_dataset_name;
@@ -60,10 +58,6 @@ vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
   return data;
 }
 
-void write_features() {
-  
-}
-
 int main(int argc, char** argv) {
      gflags::ParseCommandLineFlags(&argc, &argv, true);
   config_reader::ConfigReader reader({FLAGS_robot_config});
@@ -88,15 +82,15 @@ int main(int argc, char** argv) {
   // sampler.SetNavParams(nav_params);
 
 
-  Eigen::Vector4f weights{0,0,0,0};
+  Eigen::Vector4f weights{1,1,1,1};
 
-  // auto rd = std::random_device();
-  // auto rng = std::default_random_engine{rd()};
+  auto rd = std::random_device();
+  auto rng = std::default_random_engine{rd()};
 
   std::cout << data.size() << std::endl;
 
   for (int e = 0; e < FLAGS_epochs; e++) {
-  // std::shuffle(std::begin(data), std::end(data), rng);
+  std::shuffle(std::begin(data), std::end(data), rng);
   for (size_t i = 0; i < data.size(); i++) {
     Eigen::Vector2f vel = {data[i].second[1], 0};
     float ang_vel = vel.x() * data[i].second[0];
@@ -160,7 +154,7 @@ int main(int argc, char** argv) {
   for (size_t i = 0; i < data.size(); i++) {
     sampler.Update({data[i].second[1], 0}, 0, zeros, data[i].first, img);
     evaluator.Update(zeros, 0, {data[i].second[1], 0}, 0, zeros, data[i].first, img);
-    auto samples = sampler.GetSamples(FLAGS_n_samples);
+    auto samples = sampler.GetSamples(FLAGS_n_samples+1);
     auto rollout_features = evaluator.GetFeatures(samples);
 
     float curv_closest_to_gt = -3;
@@ -184,7 +178,7 @@ int main(int argc, char** argv) {
         highest_score = score;
         highest_scoring_curv = curvature;
       }
-      // std::cout << curv_closest_to_gt << " " << highest_scoring_curv << std::endl;
+      std::cout << curv_closest_to_gt << " " << highest_scoring_curv << std::endl;
 
     }
 

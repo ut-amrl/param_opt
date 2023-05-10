@@ -15,10 +15,10 @@ using std::pair;
 using std::vector;
 
 DEFINE_string(robot_config, "config/navigation.lua", "help");
-DEFINE_string(dataset_name, "manual-unsupervised-laps/dataset.csv",
+DEFINE_string(dataset_name, "low_speed_optimal_line/dataset.csv",
               "filename to dataset");
 
-const int NUM_SAMPLES = 41;
+const int NUM_SAMPLES = 15;
 const int NUM_FEATURES = 4;
 
 vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {

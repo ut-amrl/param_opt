@@ -1,7 +1,8 @@
 #include "ceres/ceres.h"
 #include "gflags/gflags.h"
 #include <eigen3/Eigen/Dense>
-#include <vector>
+#include <bits/stdc++.h>
+
 
 using ceres::AutoDiffCostFunction;
 using ceres::CauchyLoss;
@@ -12,11 +13,54 @@ using ceres::Solver;
 
 
 DEFINE_string(dataset_name, "low_speed_optimal_line/curv_greater.csv", "filename to dataset");
-DEFINE_int32(n_samples, 41, "he");
+DEFINE_int32(n_samples, 15, "he");
 DEFINE_int32(n_iters, 10, "iters of ceres solver");
 
-std::vector<std::pair<Eigen::MatrixXd, Eigen::VectorXd>> dataset() {
-    return {};
+
+const int NUM_SAMPLES = 15;
+const int NUM_FEATURES = 4;
+
+
+
+// write a function to read the format that out_data is written in
+std::vector<std::pair<Eigen::Matrix<double, NUM_SAMPLES, NUM_FEATURES>,
+                      Eigen::Matrix<double, NUM_SAMPLES, 1>>>
+read_data() {
+  std::ifstream csv("data.csv");
+  std::string line;
+  std::getline(csv, line);
+  std::stringstream ss(line);
+  std::string cell;
+  int n_samples;
+  int n_features;
+  std::getline(ss, cell, ',');
+  std::getline(ss, cell, ',');
+  n_samples = std::stoi(cell);
+  std::getline(ss, cell, ',');
+  n_features = std::stoi(cell);
+  std::getline(ss, cell, ',');
+  std::vector<std::pair<Eigen::Matrix<double, NUM_SAMPLES, NUM_FEATURES>,
+                        Eigen::Matrix<double, NUM_SAMPLES, 1>>>
+      data;
+  while (std::getline(csv, line)) {
+    std::stringstream ss(line);
+    std::string cell;
+    Eigen::Matrix<double, NUM_SAMPLES, NUM_FEATURES> state(NUM_SAMPLES,
+                                                          NUM_FEATURES);
+    Eigen::Matrix<double, NUM_SAMPLES, 1> cost(NUM_SAMPLES);
+    for (int i = 0; i < n_samples; i++) {
+      for (int j = 0; j < n_features; j++) {
+        std::getline(ss, cell, ',');
+        state(i, j) = std::stof(cell);
+      }
+    }
+    for (int i = 0; i < n_samples; i++) {
+      std::getline(ss, cell, ',');
+      cost(i) = std::stof(cell);
+    }
+    data.push_back({state, cost});
+  }
+  return data;
 }
 
 struct RolloutCostResidual {
@@ -48,15 +92,15 @@ int main(int argc, char** argv) {
     options_.max_num_iterations = FLAGS_n_iters;
     options_.minimizer_progress_to_stdout = false;
 
-    double w0;
-    double w1;
-    double w2;
-    double w3;
+    double w0 = 1;
+    double w1 = 1;
+    double w2 = 1;
+    double w3 = 1;
 
     // for each row in dataset, we have an eigen matrix of features and actions, and a vector of costs (3, 2, 1, 0, 1, 2, 3, 4, ...)
 
     // we have 4 variables we want to optimize over, a vector4f that we multiply with the matrix and subtract from the label, take the mag
-    auto data = dataset();
+    auto data = read_data();
 
     for (int i  = 0; i < n_rows; i++) {
         Eigen::VectorXd labels = data[i].second;
