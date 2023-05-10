@@ -88,3 +88,5 @@ for X, y in data:
     # elif gt == pred + 1 or gt == pred - 1:
     #     c += 0.5
 print("Accuracy: %.4f" % (c / len(data)))
+
+torch.jit.script(net).save("network.pt")
