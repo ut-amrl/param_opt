@@ -12,7 +12,7 @@ using ceres::Solve;
 using ceres::Solver;
 
 
-DEFINE_string(dataset_name, "low_speed_optimal_line/curv_greater.csv", "filename to dataset");
+DEFINE_string(dataset_name, "data.csv", "filename to dataset");
 DEFINE_int32(n_samples, 15, "he");
 DEFINE_int32(n_iters, 10, "iters of ceres solver");
 
@@ -26,7 +26,7 @@ const int NUM_FEATURES = 4;
 std::vector<std::pair<Eigen::Matrix<double, NUM_SAMPLES, NUM_FEATURES>,
                       Eigen::Matrix<double, NUM_SAMPLES, 1>>>
 read_data() {
-  std::ifstream csv("data.csv");
+  std::ifstream csv(FLAGS_dataset_name);
   std::string line;
   std::getline(csv, line);
   std::stringstream ss(line);
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
         CostFunction *ct = new AutoDiffCostFunction<RolloutCostResidual, 1, 1, 1, 1, 1>(
             new RolloutCostResidual(labels, state_mat)
         );
-        problem_.AddResidualBlock(ct, new CauchyLoss(0.5), &w0, &w1, &w2, &w3);
+        problem_.AddResidualBlock(ct, new CauchyLoss(0.9), &w0, &w1, &w2, &w3);
     }
 
     Solve(options_, &problem_, &summary_);

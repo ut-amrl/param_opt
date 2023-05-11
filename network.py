@@ -1,6 +1,10 @@
 import torch
 import csv
+import argparse
 
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--data", help = "file with state matrix csv")
+args = parser.parse_args()
 
 class Network(torch.nn.Module):
     def __init__(self):
@@ -10,6 +14,9 @@ class Network(torch.nn.Module):
         self.conv1 = torch.nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1)
         self.conv2 = torch.nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
         self.fc1 = torch.nn.Linear(32 * 4 * 41, 41)
+        # add fully connected w nonlinearity
+
+        # cross entropy loss and one hot encoding another option
 
     def forward(self, x):
         x = torch.nn.functional.relu(self.conv1(x))
@@ -35,7 +42,7 @@ class Data(torch.utils.data.Dataset):
         # each row is the row major enumeration of a n_samples x n_features x 1 tensor followed by a n_samples x 1 tensor
         # stores the data in a list of tuples of tensors
         data = []
-        with open("data.csv") as csvfile:
+        with open(args.data) as csvfile:
             reader = csv.reader(csvfile, delimiter=",")
             header = next(reader)
             n_samples = int(header[1])
@@ -56,7 +63,7 @@ class Data(torch.utils.data.Dataset):
         return data
 
 
-net = Network().cuda()
+net = Network()
 data = Data()
 train_loader = torch.utils.data.DataLoader(data, batch_size=32, shuffle=True)
 
@@ -67,7 +74,7 @@ losses = []
 for epoch in range(5):
     l = 0
     for X, y in train_loader:
-        X, y = X.cuda(), y.cuda()
+        X, y = X, y
         optimizer.zero_grad()
         output = net(X)
         loss = loss_func(output, y)
@@ -79,7 +86,7 @@ for epoch in range(5):
 
 c = 0
 for X, y in data:
-    X, y = X.cuda(), y.cuda()
+    X, y = X, y
     gt = y.argmin().cpu().detach().item()
     output = net(X)
     pred = output.argmin().cpu().detach().item()

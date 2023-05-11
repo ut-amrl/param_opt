@@ -17,8 +17,9 @@ using std::vector;
 DEFINE_string(robot_config, "config/navigation.lua", "help");
 DEFINE_string(dataset_name, "low_speed_optimal_line/dataset.csv",
               "filename to dataset");
+DEFINE_string(output, "state_matrix.csv", "state matrix csv file name");
 
-const int NUM_SAMPLES = 15;
+const int NUM_SAMPLES = 41;
 const int NUM_FEATURES = 4;
 
 vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
@@ -61,7 +62,7 @@ vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
 std::vector<std::pair<Eigen::Matrix<float, NUM_SAMPLES, NUM_FEATURES>,
                       Eigen::Matrix<float, NUM_SAMPLES, 1>>>
 read_data() {
-  std::ifstream csv("data.csv");
+  std::ifstream csv(FLAGS_output);
   std::string line;
   std::getline(csv, line);
   std::stringstream ss(line);
@@ -154,7 +155,7 @@ int main(int argc, char** argv) {
   // cost vector in row-major order include the dimensions of each matrix or
   // vector in the first row
   std::ofstream outfile;
-  outfile.open("data.csv");
+  outfile.open(FLAGS_output);
   outfile << out_data.size() << "," << NUM_SAMPLES << "," << 4 << "," << 1
           << std::endl;
   for (size_t i = 0; i < out_data.size(); i++) {

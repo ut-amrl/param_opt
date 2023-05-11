@@ -21,6 +21,12 @@ DEFINE_string(dataset_name, "low_speed_optimal_line/dataset.csv", "filename to d
 DEFINE_double(alpha, 0.1, "das");
 DEFINE_int32(epochs, 3, "epns");
 
+DEFINE_int32(perceptron, 0, "0 for testing params, 1 for perceptron");
+DEFINE_double(w0, 0, "dsa");
+DEFINE_double(w1, 0, "dsa");
+DEFINE_double(w2, 0, "dsa");
+DEFINE_double(w3, 0, "dsa");
+
 vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
   auto filepath = FLAGS_dataset_name;
   std::ifstream csv(filepath);
@@ -58,10 +64,73 @@ vector<pair<vector<Eigen::Vector2f>, vector<float>>> read_csv() {
   return data;
 }
 
+void test_ceres_params(float w0, float w1, float w2, float w3) {
+  Eigen::Vector4f weights{w0,w1,w2,w3};
+ Eigen::Vector2f zeros(0, 0);
+  cv::Mat img;
+
+  auto data = read_csv();
+    motion_primitives::LinearEvaluator evaluator;
+  motion_primitives::AckermannSampler sampler;
+
+    // auto rd = std::random_device();
+  // auto rng = std::default_random_engine{rd()};
+
+  std::cout << data.size() << std::endl;
+  // std::shuffle(std::begin(data), std::end(data), rng);
+
+
+  float points = 0;
+  for (size_t i = 0; i < data.size(); i++) {
+    sampler.Update({data[i].second[1], 0}, 0, zeros, data[i].first, img);
+    evaluator.Update(zeros, 0, {data[i].second[1], 0}, 0, zeros, data[i].first, img);
+    auto samples = sampler.GetSamples(FLAGS_n_samples+1);
+    auto rollout_features = evaluator.GetFeatures(samples);
+
+    float curv_closest_to_gt = -3;
+    float closest_curv_diff = 10000000;
+    Eigen::Vector4f gt_features;
+    float highest_scoring_curv = 0;
+    float highest_score = 100000;
+
+    for (auto& [features, curvature] : rollout_features) {
+      float score = features.dot(weights);
+
+      // curvature of rollout minus ground truth
+      if (abs(curvature - data[i].second[0]) < closest_curv_diff) {
+        closest_curv_diff = abs(curvature - data[i].second[0]);
+        curv_closest_to_gt = curvature;
+        gt_features = features;
+      }
+
+      // find highest scoring curvature
+      if (highest_score > score) {
+        highest_score = score;
+        highest_scoring_curv = curvature;
+      }
+      // std::cout << curv_closest_to_gt << " " << highest_scoring_curv << std::endl;
+
+    }
+
+    if (highest_scoring_curv == curv_closest_to_gt) {
+      points += 1.0;
+    } else if (fabs(highest_scoring_curv - curv_closest_to_gt) <= (5.0 / FLAGS_n_samples) * 2.5) {
+      points += 0.5;
+  }
+  }
+
+    std::cout << "weights: " << weights << std::endl;
+
+    std::cout << "acc: " << points / ((float) data.size()) << std::endl;
+}
+
 int main(int argc, char** argv) {
      gflags::ParseCommandLineFlags(&argc, &argv, true);
   config_reader::ConfigReader reader({FLAGS_robot_config});
-
+  if (!FLAGS_perceptron) {
+    test_ceres_params(FLAGS_w0, FLAGS_w1, FLAGS_w2, FLAGS_w3);
+    return 0;
+  }
   // unused
   Eigen::Vector2f zeros(0, 0);
   cv::Mat img;

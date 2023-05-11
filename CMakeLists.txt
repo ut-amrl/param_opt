@@ -20,7 +20,6 @@ message(STATUS "CXX Flags: ${CMAKE_CXX_FLAGS}")
 
 find_package(Eigen3 3.3 REQUIRED)
 find_package(OpenCV REQUIRED)
-FIND_PACKAGE(Ceres REQUIRED)
 
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
@@ -45,9 +44,6 @@ add_executable(param_opt
 			src/param_opt/param_opt_main.cpp)
 target_link_libraries(param_opt ${libs} gnav)
 
-add_executable(ceres_param
-      src/param_opt/ceres_param.cpp)
-target_link_libraries(ceres_param ${libs} ${CERES_INCLUDE_DIRS} ceres)
 add_executable(param_data_gen
 			src/param_opt/param_data_gen.cpp)
 target_link_libraries(param_data_gen ${libs} gnav)
