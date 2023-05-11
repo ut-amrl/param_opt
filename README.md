@@ -19,7 +19,7 @@ make -j
 
 In order to train the learned trajectory selector, one has to generate data from a bag file. This can be done with the following commands:
 
-'''
+```
 python3 bag_to_csv.py <bag_filename>.bag
 python3 gen_dataset.py -d <bag_filename>  # make sure the constants in this file match the constants found in ut_automata/src/vesc_driver/vesc_driver.cpp when the bag was recorded.
 ./bin/param_data_gen -dataset_name="<bag_filename>/dataset.csv" -output="<bag_filename>/state_matrix.csv"
